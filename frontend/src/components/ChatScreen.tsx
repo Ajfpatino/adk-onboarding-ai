@@ -44,7 +44,10 @@ export default function ChatScreen({
   const showQuestionnaireMode =
     activeQuestionnaire && accepted !== true;
 
-  
+  console.log("active", activeQuestionnaire)
+  console.log("accepted,", accepted)
+
+  console.log("show", showQuestionnaireMode)
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white py-4">
@@ -94,7 +97,13 @@ export default function ChatScreen({
               {messages.map((msg, index) => {
                 const questionnaire = extractQuestionnaire(msg.text);
                 const cleanText = removeQuestionnaireFromText(msg.text);
+       
+              const accepted = lastMessage
+                ? extractAnswerAccepted(msg.text)
+                : null;
 
+              const showQuestionnaireMode =
+                questionnaire && accepted !== true;
                 return (
                   <div
                     key={index}
@@ -111,7 +120,7 @@ export default function ChatScreen({
                     >
                       {cleanText && <MarkdownRenderer content={cleanText} />}
 
-                      {questionnaire && (
+                      {questionnaire && showQuestionnaireMode && (
                         <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
                           <h3 className="text-lg font-semibold">
                             {questionnaire.question}
