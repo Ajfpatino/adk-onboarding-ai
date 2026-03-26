@@ -16,18 +16,20 @@ export default function App() {
 
   const { user, logout, handleGoogleSignInSuccess,  connectWorkspace, hasClientId } = useGoogleAuth();
 
-  async function handleSend() {
-    if (!input.trim()) return;
+  async function handleSend(messageOverride?: string) {
+     const textToSend = (messageOverride ?? input).trim();
+      if (!textToSend) return;
 
-    const userText = input.trim();
+  
+
     const sessionId = getSessionId();
 
-    setMessages((prev) => [...prev, { sender: "user", text: userText }]);
+    setMessages((prev) => [...prev, { sender: "user", text: textToSend }]);
     setInput("");
     setLoading(true);
 
     try {
-      const events = await sendMessageToAgent(userText, sessionId);
+      const events = await sendMessageToAgent(textToSend, sessionId);
       const agentText = extractAgentText(events);
 
       setMessages((prev) => [
