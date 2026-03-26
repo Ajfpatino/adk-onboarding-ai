@@ -85,6 +85,6 @@ export function useGoogleAuth() {
     logout,
     hasClientId,
     handleGoogleSignInSuccess,
-    connectWorkspace
+    connectWorkspace,
    };
 }
