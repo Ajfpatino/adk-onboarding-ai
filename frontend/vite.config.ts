@@ -13,6 +13,7 @@ export default defineConfig({
       "/api/adk": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => path.replace(/^\/api\/adk/, ""),
       },
     },

@@ -16,42 +16,57 @@ export default function App() {
 
   const { user, logout, handleGoogleSignInSuccess,  connectWorkspace, hasClientId } = useGoogleAuth();
 
-  async function handleSend(messageOverride?: string) {
-     const textToSend = (messageOverride ?? input).trim();
-      if (!textToSend) return;
+async function handleSend(messageOverride?: string) {
+  const textToSend = (messageOverride ?? input).trim();
+  if (!textToSend) return;
 
-  
+  const sessionId = getSessionId();
 
-    const sessionId = getSessionId();
+  // Add user message
+  setMessages((prev) => [...prev, { sender: "user", text: textToSend }]);
+  setInput("");
+  setLoading(true);
 
-    setMessages((prev) => [...prev, { sender: "user", text: textToSend }]);
-    setInput("");
-    setLoading(true);
+  let currentText = "";
+  let agentMessageIndex = -1;
 
-    try {
-      const events = await sendMessageToAgent(textToSend, sessionId);
-      const agentText = extractAgentText(events);
+  // Add empty agent message placeholder
+  setMessages((prev) => {
+    agentMessageIndex = prev.length;
+    return [...prev, { sender: "agent", text: "" }];
+  });
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "agent",
-          text: agentText || "No response returned.",
-        },
-      ]);
-    } catch (error: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "agent",
-          text: error.message || "Failed to reach the agent server.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
+  try {
+    // Call your streaming sendMessageToAgent function from the other file
+    await sendMessageToAgent(textToSend, sessionId, (chunk) => {
+      if (chunk.type === "message") {
+        currentText += chunk.content || "";
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[agentMessageIndex] = { sender: "agent", text: currentText };
+          return updated;
+        });
+      }
+
+      if (chunk.type === "tool_call") {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[agentMessageIndex] = { sender: "agent", text: "🔧 Reading Google Drive..." };
+          return updated;
+        });
+      }
+    });
+  } catch (err) {
+    console.error("Error streaming agent response:", err);
+    setMessages((prev) => {
+      const updated = [...prev];
+      updated[agentMessageIndex] = { sender: "agent", text: "⚠️ Error retrieving response." };
+      return updated;
+    });
+  } finally {
+    setLoading(false);
   }
-
+}
   function handleLogout() {
     logout();
     setMessages([]);

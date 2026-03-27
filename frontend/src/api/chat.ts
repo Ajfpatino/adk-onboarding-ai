@@ -10,7 +10,7 @@ export async function ensureSession(sessionId: string) {
     }
   );
 
-     const text = await response.text();
+  const text = await response.text();
 
   // If it already exists, ADK may return an error like "Session already exists".
   // We can safely ignore that.
@@ -25,31 +25,32 @@ export async function ensureSession(sessionId: string) {
   }
 }
 
-export async function sendMessageToAgent(message: string, sessionId: string) {
-  await ensureSession(sessionId);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function sendMessageToAgent(message: string, sessionId: string, onChunk: (data: any) => void) {
+    await ensureSession(sessionId)
 
-  const response = await fetch("/api/adk/run", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      appName: "agent",
-      userId: "khen",
-      sessionId,
-     newMessage :{
-        role: "user",
-        parts: [{text: message}],
-     },
-    }),
+    const params = new URLSearchParams({
+    appName: "agent",
+    userId: "khen",
+    sessionId,
+    newMessage: encodeURIComponent(JSON.stringify({ role: "user", parts: [{ text: message }] })),
   });
 
-  const rawText = await response.text();
-  console.log("Raw response from server:", rawText);
+  const eventSource = new EventSource(`/api/adk/run_sse?${params.toString()}`);
 
-  if (!response.ok) {
-    console.error("Server Error Response:", rawText);
-    throw new Error(`Request failed: ${response.status} - ${rawText}`);  }
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onChunk(data);
+    } catch (err) {
+      console.error("Failed to parse chunk:", event.data, err);
+    }
+  };
 
-  return JSON.parse(rawText);
+  eventSource.onerror = (err) => {
+    console.error("SSE error:", err);
+    eventSource.close();
+  };
+
+  return eventSource;
 }
